@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import os
 import time
+from typing import Optional
 
 from twilio.rest import Client
 
@@ -25,7 +28,6 @@ def make_call(scenario_id: str) -> dict:
     call_sid = call.sid
     print(f"  → SID: {call_sid}")
 
-    # Poll until the call completes
     while True:
         call = client.calls(call_sid).fetch()
         if call.status in ("completed", "failed", "busy", "no-answer", "canceled"):
@@ -34,15 +36,7 @@ def make_call(scenario_id: str) -> dict:
 
     print(f"  → Status: {call.status}, duration: {call.duration}s")
 
-    # Give Twilio a moment to process the recording
-    time.sleep(8)
-
-    recordings = client.recordings.list(call_sid=call_sid, limit=1)
-    recording_url = None
-    if recordings:
-        rec = recordings[0]
-        recording_url = f"https://api.twilio.com{rec.uri.replace('.json', '.mp3')}"
-
+    recording_url = _get_recording_url(client, call_sid)
     return {
         "call_sid": call_sid,
         "status": call.status,
@@ -50,3 +44,15 @@ def make_call(scenario_id: str) -> dict:
         "recording_url": recording_url,
         "scenario_id": scenario_id,
     }
+
+
+def _get_recording_url(client: Client, call_sid: str, retries: int = 8) -> Optional[str]:
+    for attempt in range(retries):
+        recordings = client.recordings.list(call_sid=call_sid, limit=1)
+        if recordings:
+            rec = recordings[0]
+            return f"https://api.twilio.com{rec.uri.replace('.json', '.mp3')}"
+        wait = 5 if attempt < 3 else 10
+        print(f"  Recording not ready, retrying in {wait}s... ({attempt + 1}/{retries})")
+        time.sleep(wait)
+    return None
