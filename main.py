@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import os
 import time
 import threading
 from pathlib import Path
+from typing import Optional
 
 import typer
 import uvicorn
@@ -29,7 +32,7 @@ def _wait_for_server(timeout: int = 15) -> bool:
     return False
 
 
-def _run_scenario(scenario_id: str, analyze: bool = True) -> str | None:
+def _run_scenario(scenario_id: str, analyze: bool = True) -> Optional[str]:
     from src.caller import make_call
     from src.storage import get_prefix_for_sid, download_recording, load_transcript
     from src.scenarios import get_scenario
