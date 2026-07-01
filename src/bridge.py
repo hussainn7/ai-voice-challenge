@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import os
+from typing import Optional
 
 import websockets
 from fastapi import FastAPI, WebSocket, Request
@@ -40,9 +43,9 @@ async def media_stream(websocket: WebSocket, scenario_id: str = "schedule_basic"
     except ValueError:
         scenario = get_scenario("schedule_basic")
 
-    transcript: list[dict] = []
-    call_sid: str | None = None
-    stream_sid: str | None = None
+    transcript: list = []
+    call_sid: Optional[str] = None
+    stream_sid: Optional[str] = None
 
     async with websockets.connect(
         "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17",
@@ -103,6 +106,13 @@ async def media_stream(websocket: WebSocket, scenario_id: str = "schedule_basic"
                             "event": "media",
                             "streamSid": stream_sid,
                             "media": {"payload": data["delta"]},
+                        }))
+
+                    elif t == "input_audio_buffer.speech_started" and stream_sid:
+                        # Agent started speaking — clear buffered bot audio (barge-in)
+                        await websocket.send_text(json.dumps({
+                            "event": "clear",
+                            "streamSid": stream_sid,
                         }))
 
                     elif t == "response.audio_transcript.done":

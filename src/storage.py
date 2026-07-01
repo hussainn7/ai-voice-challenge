@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import httpx
 
@@ -13,7 +16,7 @@ def _next_prefix() -> str:
     return f"call-{len(existing) + 1:02d}"
 
 
-def save_transcript(call_sid: str, transcript: list[dict], scenario_id: str) -> str:
+def save_transcript(call_sid: str, transcript: list, scenario_id: str) -> str:
     CALLS_DIR.mkdir(exist_ok=True)
     prefix = _next_prefix()
 
@@ -46,14 +49,14 @@ def save_transcript(call_sid: str, transcript: list[dict], scenario_id: str) -> 
     return prefix
 
 
-def get_prefix_for_sid(call_sid: str) -> str | None:
+def get_prefix_for_sid(call_sid: str) -> Optional[str]:
     mapping_file = CALLS_DIR / ".sid_map.json"
     if not mapping_file.exists():
         return None
     return json.loads(mapping_file.read_text()).get(call_sid)
 
 
-def load_transcript(prefix: str) -> dict | None:
+def load_transcript(prefix: str) -> Optional[dict]:
     path = CALLS_DIR / f"{prefix}.json"
     if not path.exists():
         return None
